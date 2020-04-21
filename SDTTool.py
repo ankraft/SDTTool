@@ -3,14 +3,14 @@
 #	Main module for the SDTTool
 
 from xml.etree.ElementTree import XMLParser, ParseError
-from SDT2Parser import SDT2Parser
-from SDT3Parser import SDT3Parser
+from sdtv2 import *
+from sdtv3 import *
 from SDTPrinter import *
 
 
 import io, sys, traceback, argparse, textwrap
 
-version = '0.7'
+version = '0.8'
 description = 'SDTTool ' + version + ' - A tool to read and convert Smart Device Templates.'
 epilog = 'Read arguments from one or more configuration files: @file1 @file2 ...|n |n See https://github.com/Homegateway for further information.'
 
@@ -41,9 +41,8 @@ class MultilineFormatter(argparse.HelpFormatter):
 
 def readDataFromFile(inFile):
 	# Read the input file
-	inputFile = open(inFile, 'r')
-	data = inputFile.read()
-	inputFile.close()
+	with open(inFile, 'r') as inputFile:
+		data = inputFile.read()
 	return data
 
 #
@@ -96,20 +95,16 @@ def readSDT3XML(inFile):
 #	Print the output to stdout or to a file
 #
 def outputResult(outFile, result):
-	if (result == None):
+	if result == None:
 		return
-	if (outFile == None):
+	if outFile == None:
 		print(result)
 	else:
-		outputFile = None
 		try:
-			outputFile = open(outFile, 'w')
-			outputFile.write(result)
+			with open(outFile, 'w') as outputFile:
+				outputFile.write(result)
 		except IOError as err:
 			print(err)
-		finally:
-			if (outputFile != None):
-				outputFile.close()
 
 
 #
@@ -131,18 +126,20 @@ def main(argv):
 	parser.convert_arg_line_to_args = convertArgLineToArgs
 
 	parser.add_argument('-o', '--outfile', action='store', dest='outFile', help='The output file or directory for the result. The default is stdout')
-	parser.add_argument('-if', '--inputformat', choices=('sdt2', 'sdt3', ''), action='store', dest='inputFormat', default='sdt3', help='The input format to read. The default is sdt3')
-	parser.add_argument('-of', '--outputformat', choices=('plain', 'opml', 'markdown', 'sdt3', 'java', 'vorto-dsl', 'onem2m-svg', 'onem2m-xsd'), action='store', dest='outputFormat', default='markdown', help='The output format for the result. The default is markdown')
+	parser.add_argument('-if', '--inputformat', choices=('sdt2', 'sdt3'), action='store', dest='inputFormat', default='sdt3', help='The input format to read. The default is sdt3')
+	parser.add_argument('-of', '--outputformat', choices=('plain', 'opml', 'markdown', 'sdt3', 'java', 'vorto-dsl', 'onem2m-svg', 'onem2m-xsd', 'swagger'), action='store', dest='outputFormat', default='markdown', help='The output format for the result. The default is markdown')
 	parser.add_argument('--hidedetails',  action='store_true', help='Hide the details of module classes and devices when printing documentation')
 	parser.add_argument('--markdowntables',  action='store_true', help='Format markdown output as tables for markdown')
+	parser.add_argument('--markdownpagebreak',  action='store_true', help='Insert page breaks before ModuleClasse and Device definitions.')
 	parser.add_argument('--licensefile',  action='store', dest='licensefile', help='Add the text of license file to output files')
 
 	oneM2MArgs = parser.add_argument_group('oneM2M sepcific')
 	oneM2MArgs.add_argument('--domain',  action='store', dest='domain', help='Set the domain for the model')
-	oneM2MArgs.add_argument('--namespaceprefix',  action='store', dest='namespaceprefix', help='Specify the XSD name space prefix for the model')
+	oneM2MArgs.add_argument('--namespaceprefix',  action='store', dest='namespaceprefix', help='Specify the name space prefix for the model')
 	oneM2MArgs.add_argument('--abbreviationsinfile',  action='store', dest='abbreviationsinfile', help='Specify the file that contains a CSV table of alreadys existing abbreviations.')
 	oneM2MArgs.add_argument('--abbreviationlength',  action='store', dest='abbreviationlength', default='5', help='Specify the maximum length for abbreviations. The default is 5.')
 	oneM2MArgs.add_argument('--xsdtargetnamespace',  action='store', dest='xsdtargetnamespace', help='Specify the target namespace for the oneM2M XSD (a URI).')
+	oneM2MArgs.add_argument('--modelversion',  action='store', dest='modelversion', help='Specify the version of the model.')
 
 	requiredNamed = parser.add_argument_group('required arguments')
 	requiredNamed.add_argument('-i', '--infile', action='store', dest='inFile', required=True, help='The SDT input file to parse')
@@ -155,51 +152,55 @@ def main(argv):
 	inFile = args.inFile
 	outFile = args.outFile
 	inputFormat = args.inputFormat
-	outputFormat = args.outputFormat
 	
 	moreOptions = {}
-	moreOptions['hideDetails'] = args.hidedetails
-	moreOptions['markdowntables'] = args.markdowntables
-	moreOptions['licensefile'] = args.licensefile
-	moreOptions['domain'] = args.domain
-	moreOptions['namespaceprefix'] = args.namespaceprefix
-	moreOptions['abbreviationsinfile'] = args.abbreviationsinfile
-	moreOptions['abbreviationlength'] = args.abbreviationlength
-	moreOptions['xsdtargetnamespace'] = args.xsdtargetnamespace
+	moreOptions['hideDetails'] 					= args.hidedetails
+	moreOptions['markdowntables'] 				= args.markdowntables
+	moreOptions['pageBreakBeforeMCandDevices'] 	= args.markdownpagebreak
+	moreOptions['licensefile'] 					= args.licensefile
+	moreOptions['domain'] 						= args.domain
+	moreOptions['namespaceprefix'] 				= args.namespaceprefix
+	moreOptions['abbreviationsinfile'] 			= args.abbreviationsinfile
+	moreOptions['abbreviationlength'] 			= args.abbreviationlength
+	moreOptions['xsdtargetnamespace'] 			= args.xsdtargetnamespace
+	moreOptions['modelversion'] 				= args.modelversion
+	moreOptions['outputFormat']					= args.outputFormat
 
 
 	# Read input file. Check for correct format
 
-	if (inputFormat == 'sdt2'):
+	if inputFormat == 'sdt2':
 		domain, nameSpaces = readSDT2XML(inFile)
-		if (checkForNamespace(nameSpaces, 'http://homegatewayinitiative.org/xml/dal/2.0') == False):
+		if not checkForNamespace(nameSpaces, 'http://homegatewayinitiative.org/xml/dal/2.0'):
 			print('ERROR: Namespace "http://homegatewayinitiative.org/xml/dal/2.0" not found in input file.')
 			return
 
-	elif (inputFormat == 'sdt3'):
+	elif inputFormat == 'sdt3':
 		domain, nameSpaces = readSDT3XML(inFile)
-		if (checkForNamespace(nameSpaces, 'http://homegatewayinitiative.org/xml/dal/3.0') == False):
+		if not checkForNamespace(nameSpaces, 'http://homegatewayinitiative.org/xml/dal/3.0'):
 			print('ERROR: Namespace "http://homegatewayinitiative.org/xml/dal/3.0" not found in input file.')
 			return
 
 	# Output to destination format
-
-	if (outputFormat == 'plain'):
+	if args.outputFormat == 'plain':
 		outputResult(outFile, printPlain(domain, moreOptions))
-	elif (outputFormat == 'opml'):
+	elif args.outputFormat == 'opml':
 		outputResult(outFile, printOPML(domain, moreOptions))
-	elif (outputFormat == 'markdown'):
+	elif args.outputFormat == 'markdown':
 		outputResult(outFile, printMarkdown(domain, moreOptions))
-	elif (outputFormat == 'sdt3'):
+	elif args.outputFormat == 'sdt3':
 		outputResult(outFile, printSDT3(domain, inputFormat, moreOptions))
-	elif (outputFormat == 'java'):
+	elif args.outputFormat == 'java':
 		printJava(domain, inputFormat, outFile, moreOptions)
-	elif (outputFormat == 'vorto-dsl'):
+	elif args.outputFormat == 'vorto-dsl':
 		printVortoDSL(domain, inputFormat, outFile, moreOptions)
-	elif (outputFormat == 'onem2m-svg'):
+	elif args.outputFormat == 'onem2m-svg':
 		printOneM2MSVG(domain, inputFormat, outFile, moreOptions)
-	elif (outputFormat == 'onem2m-xsd'):
+	elif args.outputFormat == 'onem2m-xsd':
 		printOneM2MXSD(domain, inputFormat, outFile, moreOptions)
+	elif args.outputFormat == 'swagger':
+		printSwagger(domain, inputFormat, outFile, moreOptions)
+
 
 
 if __name__ == "__main__":

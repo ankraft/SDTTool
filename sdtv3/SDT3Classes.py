@@ -45,6 +45,7 @@ class SDT3Device(SDT3Element):
 class SDT3SubDevice(SDT3Element):
 	def __init__(self):
 		self.id = None
+		self.extends = None
 		self.doc = None
 		self.modules = []
 		self.properties = []
@@ -58,7 +59,7 @@ class SDT3Property(SDT3Element):
 		self.name = None
 		self.optional = None
 		self.doc = None
-		self.type = None
+		self.type = None	# This is always a simpleType
 		self.value = None
 
 #

@@ -1,7 +1,23 @@
 # Changelog
 
+## Version 0.8
+15.05.2018
+
+- Added *--modelversion** 
+- Adopted to new naming scheme for oneM2M XSD and SVG files
+- Various fixes for XSD schemas. Support oneM2M Version 2 XSD
+- Refactored script directory structure
+- Added *--markdownpagebreak* option
+- Added first support to generate Swagger files for ModuleClasses and Devices. Not complete yet. 
+- Added *-of swagger* option
+- Beautified OPML/Mindmanager output
+- First work on replacing the hand-crafted output modules by a templating engine (Jinja2, [](http://jinja.pocoo.org/)).
+- Profided first templates for markdown and oneM2M XSD.
+- Added support for oneM2M release R3
+ 
+
 ## Version 0.7
-xx.xx.xxxx
+09.04.2016
 
 - Export to Eclipse Vorto, first version
 - First version of export to SVG in oneM2M resource format

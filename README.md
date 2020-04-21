@@ -1,7 +1,7 @@
 # SDTTool
-Version 0.7
+Version 0.8
 
-*SDTTool* is a tool to read and convert XML files that conform to the *Smart Device Template* schema definition.
+*SDTTool* is a utility to read and convert *Smart Device Template* (*SDT*) definitions.
 
 ## Introduction
 The [Smart Device Template](https://github.com/Homegateway/SmartDeviceTemplate) (SDT) schema defined by the Home Gateway Initiative (HGI) is a format to describe concrete and abstract devices as well as capabilities, data models and functions of those devices. See [SDT Introduction](https://github.com/Homegateway/SmartDeviceTemplate/blob/master/SDT/schema3.0/docs/Introduction.md) and [SDT Components](https://github.com/Homegateway/SmartDeviceTemplate/blob/master/SDT3.0/docs/SDT_Components.md) for an introduction to the SDT.
@@ -11,7 +11,15 @@ The [Smart Device Template](https://github.com/Homegateway/SmartDeviceTemplate) 
 
 ## Installation
 ### Prerequisites
-An installation of [Python 3](https://www.python.org/downloads/) (version 3.5 or higher) is required. For an earlier version of Python (3.2 or higher) ``pathlib`` must be installed separately (see also [https://pypi.python.org/pypi/pathlib/](https://pypi.python.org/pypi/pathlib/)
+
+#### Python 3.x
+An installation of [Python 3](https://www.python.org/downloads/) (version 3.5 or higher) is required. For an earlier version of Python (3.2 or higher) ``pathlib`` must be installed separately (see also [PathLib](https://pypi.python.org/pypi/pathlib/)).
+
+#### Jinja2
+SDTTool uses the template engine [Jinja2](http://jinja.pocoo.org). You need to install it, e.g. via pip:
+
+	pip install Jinja2
+
 
 ### Copying
 Download the latest release of *SDTTool* and copy them into a directory of your choice.
@@ -38,7 +46,11 @@ The input format can be set by the option ``-if``.
 
 It is also possible to generate Java interfaces and classes from SDT version 3 with the ``java`` output format. In this case the ``-o`` argument must point to an output directory.
 
-	python3 SDTTool.py -i anInputFile.xml -if sdt3 -o anOutputDirectoy -of java
+	python3 SDTTool.py -i anInputFile.xml -o anOutputDirectoy -of java
+
+Skeletons of *definitions* and *paths* operations for a Swagger input file can be generated with the ``swagger`` output format. In this case the ``-o`` argument again must point to an output directory.
+
+	python3 SDTTool.py -i anInputFile.xml -o anOutputDirectoy -of swagger
 
 Running the script without with the ``-h`` option or without any argument will present a an overview about all possible command line parameters.
 
@@ -51,7 +63,7 @@ The following input formats are supported for the ``-if`` or ``--inputformat`` c
 - **sdt3**: SDT Version 3.0, the default
 
 ### Output Formats
-- ``-of {plain,opml,markdown,sdt3,java,vorto-dsl,onem2m-svg,onem2m-xsd}``, ``--outputformat {plain,opml,markdown,sdt3,java,vorto-dsl,onem2m-svg,onem2m-xsd}``: The output format for the result. The default is *markdown*.
+- ``-of {plain,opml,markdown,sdt3,java,vorto-dsl,onem2m-svg,onem2m-xsd,swagger}``, ``--outputformat {plain,opml,markdown,sdt3,java,vorto-dsl,onem2m-svg,onem2m-xsd,swagger}``: The output format for the result. The default is *markdown*.
 
 Output formats for documentation for the ``-of`` or ``--outputformat`` command line argument:
 
@@ -66,6 +78,8 @@ Output formats for documentation for the ``-of`` or ``--outputformat`` command l
 In addition to the XSD files the following files are generated as well
 	- Skeleton files for enum type definitions are generated in the *hd* sub-directory.
 	- Files with newly found abbreviations (``_Abbreviations.*``). One file contains a python map, the other file contains the abbreviations in CSV format. Only new abbreviations, which are not found in the file that was specified with ``--abbreviationsinfile``, are added.
+- **swagger**: This output format generates YAML files with Swagger definitions for ModuleClasses and Devices. These files cannot be used directly, but provide the necessary Swagger *definitions* skeletons and *paths* operations that can be copied and adapted to a real Swagger definition.  
+For this output format the argument ``-o`` refers to an output directory, not a single file.
 
 ### Basic Arguments
 - ``-i <filename>``, ``--infile <filename>``: Required argument. Specify the input file for the conversion.
@@ -73,13 +87,16 @@ In addition to the XSD files the following files are generated as well
 
 ### oneM2M specific arguments
 - ``--domain <domain name>``: Specify the domain name for XSD output.
-- ``--namespaceprefix <xsd prefix>``: Specify the XSD name space prefix for the model. This argument is mandatory when generating XSD.
+- ``--namespaceprefix <xsd prefix>``: Specify the XSD name space prefix for the model. This argument is mandatory when generating XSD and SVG.
 - ``--abbreviationsinfile <filename>``: Specify the file that contains a CSV table of already existing abbreviations.
 - ``--abbreviationlength <integer>``: Specify the maximum length for abbreviations. The default is *5*.
 - ``--xsdtargetnamespace <URI>`` : Specify the target namespace for the oneM2M XSD.
+- ``--modelversion <version number>`` : Specify the version of the model. This is used in the filenames of XSD and SVG files. "." characters are replaced with "_".
 
 ### Markdown Specific Arguments
 - ``--markdowntables``: Generate tables instead of the usual list output style for markdown.
+- ``--markdownpagebreak``: Insert page breaks before ModuleClasse and Device definitions.
+
 
 ### Other Arguments
 - ``--hidedetails``: Hide the details of module classes and devices when generating the documentation.
@@ -101,15 +118,33 @@ or to mix command line arguments and configuration files:
 
 ## Limitations
 - *SDTTool* does not validate the input XML. It is assumed that the input XML conforms to the SDT schema.
+- Swagger support is not complete yet.
 
 ## Changelog
 
+## Version 0.8
+15.05.2018
+
+- Added *--modelversion** 
+- Adopted to new naming scheme for oneM2M XSD and SVG files
+- Various fixes for XSD schemas. Support oneM2M Version 2 XSD
+- Refactored script directory structure
+- Added *--markdownpagebreak* option
+- Added first support to generate Swagger files for ModuleClasses and Devices. Not complete yet. 
+- Added *-of swagger* option
+- Beautified OPML/Mindmanager output
+- First work on replacing the hand-crafted output modules by a templating engine (Jinja2, [](http://jinja.pocoo.org/)).
+- Profided first templates for markdown and oneM2M XSD.
+- Added support for oneM2M release R3
+ 
+
 ### Version 0.7
-xx.XX.2016
+09.04.2016
 
 - Export to Eclipse Vorto, first version
 - First version of export to SVG in oneM2M resource format
 - First version of export to oneM2M XSD
+- First version of abbreviation support (for oneM2M)
 - Fixed errors in Java export
 - Fixed errors in OPML export
 - Improved markdown export
@@ -124,12 +159,6 @@ xx.XX.2016
 - Fixed error when exporting SDT2 to markdown
 - Added option (``--markdowntables``) to present data points, actions, properties and more in table format
 
-### Version 0.5
-13.11.2015
-
-- Added markdown export for SDT3
-- Added OPML export for SDT3
-- Added support to export SDT3 structure as markdown tables
 
 See the [Changelog](CHANGELOG.md) for all changes.
 
